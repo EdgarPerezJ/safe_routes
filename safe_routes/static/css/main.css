@@ -1,12 +1,18 @@
+html,
 body {
-    overflow: hidden;
+    height: 100%;
 }
 
 .navbar-offset {
     margin-top: 50px;
 }
 #map {
-    position: absolute; top: 50px; bottom: 0px; left: 0px; right: 0px;
+    height: 100%;
+    width: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    z-index:0;
 }
 #map .ol-zoom {
     font-size: 1.2em;
@@ -33,6 +39,7 @@ body {
 .mini-submenu-left {
     position: absolute;
     top: 60px;
+    left: 60px;
     left: .5em;
     z-index: 40;
 }
@@ -118,24 +125,4 @@ ul, menu, dir {
 
 .color-form{
     background-color: #E6E6E6;
-}
-
-
-html, body {
-  height: 100%;
-  width: 100%;
-}
-.content {
-  height: 100%;
-}
-.panel {
-  height: 100%;
-}
-.panel-body {
-  height: 100%;
-}
-.mybox {
-  background-color: black;
-  height: 100%;
-  width: 100%;
 }

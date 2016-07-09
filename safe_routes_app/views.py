@@ -14,7 +14,9 @@ def index(request):
 def get_crimes(request):
     date = request.POST["dateCrime"]
     boxesCoords = json.loads(request.POST["boxesCoords"])
-    logger.info("The date is: " + date)
-    logger.info("Boxes coords are: " + str(boxesCoords))
     crimes = crime_service.get_crimes(date, boxesCoords)
     return JsonResponse(crimes)
+
+def get_crimes_detail(request, date, location_id):
+    crimes_detail = crime_service.get_crimes_details(date, location_id)
+    return render(request, 'crimes_detail.html', crimes_detail)

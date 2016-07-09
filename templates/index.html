@@ -12,10 +12,9 @@
         <title>Safe routes</title>
     </head>
     <body>
-        <div class="container">
+        <div class="container" id="container">
           <nav class="navbar navbar-fixed-top navbar-inverse" role="navigation">
             <div class="container-fluid">
-              <!-- Brand and toggle get grouped for better mobile display -->
                 <div class="navbar-header">
                     <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
                     <span class="sr-only">Toggle navigation</span>
@@ -76,13 +75,13 @@
                           <input type="hidden" id="hdnCsrfToken" value="{{csrf_token}}" />
                         </form>
 
-                        <hr></hr>
+                        <hr/>
                         <div>
                             <h5>Results</h5>
                             <ul class="item-summary" id="resultsSummary">
                             </ul>
                         </div>
-                    </>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -92,6 +91,7 @@
                 <i class="fa fa-search"></i>
           </div>
         </div>
+
         <script type="text/javascript" src="/static/js/lib/jquery-2.1.1.min.js"></script>
         <script type="text/javascript" src="/static/js/lib/bootstrap.min.js"></script>
         <script type="text/javascript" src="/static/js/modules/search.js"></script>
@@ -99,5 +99,7 @@
             ></script> <!-- async defer -->
         <script type="text/javascript" src="/static/js/lib/ol.js"></script>
         <script type="text/javascript" src="/static/js/lib/route-boxer.js"></script>
+        <script type="text/javascript" src="/static/js/lib/jquery.pleaseWait.js"></script>
+        <script type="text/javascript" src="/static/js/lib/underscore-min.js"></script>
     </body>
 </html>

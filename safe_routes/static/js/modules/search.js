@@ -14,15 +14,15 @@ var LNG = null;
 var autocompleteOrigin = null;
 var autocompleteDestination = null;
 var autocompleteListener = [];
-var boxpolys = [];
 var directions = [];
 var routes = [];
-var placeMarkers = [];
+var placeMarkers = new Array(2);
 var routeBoxer = null;
 var distance = 0.01 * 1.609344; // km
 var crimesObj = [];
 var crimeMarkers = [];
 var crimeInfoWindows = [];
+var safetyLevel = 0.6;
 
 /**
  * Initializes the map and the bindings of the inputs and buttons
@@ -94,6 +94,8 @@ $(function(){
     });
     //Binds the click event for the search button
     $("#btnSearchRoute").click(function() {
+        clearDirections();
+        clearMarkers(false);
         searchRoute();
     });
     //Binds the click event for clear button
@@ -136,6 +138,16 @@ function initSearch(map){
  * @param isOrigin boolean telling if the autocomplete is the origin
  */
 function addListenerSearch(autocompleteInput, map, isOrigin){
+    var indexMarker = 0;
+    var icon = "";
+    if(isOrigin){
+        icon = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+        indexMarker = 0;
+    }
+    else{
+        icon = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+        indexMarker = 1;
+    }
     var listener = autocompleteInput.addListener('place_changed', function() {
         var place = autocompleteInput.getPlace();
         if (!place.geometry) {
@@ -149,14 +161,19 @@ function addListenerSearch(autocompleteInput, map, isOrigin){
             map.setCenter(place.geometry.location);
             map.setZoom(15);
         }
-        var label = isOrigin == true ? "S" : "T";
+        //Id there was a previous marker, it is removed.
+        if(placeMarkers[indexMarker] !== null && placeMarkers[indexMarker] !== undefined){
+            placeMarkers[indexMarker].setMap(null);
+            placeMarkers[indexMarker] = null;
+        }
         var marker = new google.maps.Marker({
             position: place.geometry.location,
-            label: label,
+            label: "",
+            icon: icon,
             map: map
         });
         marker.setVisible(true);
-        placeMarkers.push(marker);
+        placeMarkers[indexMarker] = marker;
     });
     autocompleteListener.push(listener);
 }
@@ -165,6 +182,8 @@ function addListenerSearch(autocompleteInput, map, isOrigin){
  * Search for the best routes (up to three) by Using Google Directions.
  */
 function searchRoute(){
+    //Show the spinner
+    showSpinner();
     var directionService = new google.maps.DirectionsService();
     //prepare the request
     var request = {
@@ -230,22 +249,9 @@ function getBoxesCoords(boxes){
  */
 function clearMapContent(){
     clearDirections();
-    clearMarkers();
-    clearBoxes();
+    clearMarkers(true);
     clearAutocomplete();
     initSearch(map);
-}
-
-/**
- * Clear the boxes displayed in the map
- */
-function clearBoxes() {
-    if (boxpolys != null) {
-         for (var i = 0; i < boxpolys.length; i++) {
-             boxpolys[i].setMap(null);
-         }
-    }
-    boxpolys = [];
 }
 
 /**
@@ -258,19 +264,22 @@ function clearDirections() {
          }
     }
     directions = [];
+    routes = [];
 }
 
 /**
  * Clear the markers displayed in the map
+ * @param clearPlaceMarkers if true, clear the place markers as well
  */
-function clearMarkers() {
-    if (placeMarkers !== null) {
-         for (var i = 0; i < placeMarkers.length; i++) {
-             //placeMarkers[i].setVisible(false);
-             placeMarkers[i].setMap(null);
-         }
+function clearMarkers(clearPlaceMarkers) {
+    if(clearPlaceMarkers) {
+        if (placeMarkers !== null) {
+            for (var i = 0; i < placeMarkers.length; i++) {
+                placeMarkers[i].setMap(null);
+                placeMarkers[i] = null;
+            }
+        }
     }
-    placeMarkers = [];
     if(crimeMarkers !== null){
         for(var i = 0; i < crimeMarkers.length; i++){
             for(var j = 0; j < crimeMarkers[i].length; j++){
@@ -317,31 +326,56 @@ function getCrimes(boxesCoords){
  * @param data3 crime statistics of the third route
  */
 function showData(data1, data2, data3) {
-    //Draw markers
     crimesObj = [data1, data2, data3];
+    var month = $("#cmbMonth").val();
     for(var i = 0; i < crimesObj.length; i++) {
         //Validates that exist data
         if(crimesObj[i] === null || crimesObj[i] === undefined){
             continue;
         }
-        var data = crimesObj[i][0].crimes;
         var infoWindows = [];
         var crimes = [];
-        for (var j = 0; j < data.length; j++) {
-            var contentString = '<div id="content">'+
-                  '<div id="siteNotice">'+
-                  '</div>'+
-                  '<h5 id="firstHeading" class="firstHeading">'+data[j].location.street.name+'</h5>'+
-                  '<div id="bodyContent">'+
-                  '<p>'+data[j].category+'</p>' +
-                  '</div>'+
-                  '</div>';
+        var j = 0;
+        var data = crimesObj[i][0].crimes;
+        //Grouped info to draw the info boxes properly.
+        var groupDataByLocation = _.groupBy(data, function (obj) {
+            return obj.location.latitude+","+obj.location.longitude;
+        });
+        for (var key in groupDataByLocation) {
+            var subgroup = groupDataByLocation[key];
+            var contentString = '<div id="content">' +
+                  '<h5 id="firstHeading" class="firstHeading">'+subgroup[0].location.street.name+'</h5>' +
+                  '<div id="bodyContent">';
+            //Groups by category
+            var groupDataByCategory = _.groupBy(subgroup, function (obj) {
+                return obj.category;
+            });
+            contentString += "<table class='table table-striped'> "+
+                                "<tbody>";
+            for (var keyCategory in groupDataByCategory) {
+                contentString += "<tr> " +
+                                    "<td>" + keyCategory + "</th> " +
+                                    "<td style='text-align: right'>" + groupDataByCategory[keyCategory].length + "</td> " +
+                                "</tr>";
+            }
+            contentString += "</tbody> "+
+                            "</table> "+
+                        "<a href='/routes/crimes_detail/"+month+"/"+subgroup[0].location.street.id+"' target='blank'>See details...</a>"+
+                    "</div>";
             var infowindow = new google.maps.InfoWindow({
                 content: contentString
               });
             var marker = new google.maps.Marker({
-                position: new google.maps.LatLng(Number(data[j].location.latitude), Number(data[j].location.longitude)),
-                label: "",
+                position: new google.maps.LatLng(Number(subgroup[0].location.latitude), Number(subgroup[0].location.longitude)),
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: '#F5A9A9',
+                    fillOpacity: 1,
+                    scale: 13,
+                    strokeColor: '#FA5858',
+                    strokeWeight: 2
+                  },
+                label: ""+subgroup.length,
                 map: map,
                 infoWindowIndex : j,
                 infoWindowRouteIndex : i
@@ -355,6 +389,7 @@ function showData(data1, data2, data3) {
             );
             crimes.push(marker);
             infoWindows.push(infowindow);
+            j++;
         }
         crimeInfoWindows[i] = infoWindows;
         infoWindows = [];
@@ -362,13 +397,18 @@ function showData(data1, data2, data3) {
         crimes = [];
     }
     //Show the results in the left sidebar
-    drawResults()
+    drawResults();
+    hideSpinner();
 }
 
 /**
  * Function that displays the results in the lest sidebar of the screen
  */
 function drawResults(){
+    var routeIdentifiers = ["A", "B", "C"];
+    var shortestRoute = getShortestRoute();
+    var safestRoute = getSafestRoute();
+    var indexBestRoute = getBestRoute();
     for(var i=0; i < crimesObj.length; i++){
         //Validates that the route exist
         if(routes[i] === null || routes[i] === undefined ||
@@ -379,13 +419,22 @@ function drawResults(){
         var content = "<li>" +
                         "<div class='overview'>" +
                             "<p class='main-detail'>" + crimesObj[i][0].crimes.length + " " +(crimesObj[i][0].crimes.length === 1 ? "crime" : "crimes")+ "</p>" +
-                            "<p class='sub-detail'>" + point.duration.text + " | " + point.distance.text + "</p>" +
-                            "<span class='label label-success'>Best</span> " +
-                            "<span class='label label-info'>Safest</span>" +
-                            " <span class='label label-warning'>Shortest</span>" +
-                        "</div> " +
+                            "<p class='sub-detail'>" + point.duration.text + " | " + point.distance.text + "</p>";
+        //Validates is it's the shortest route
+        if(shortestRoute === point.distance.value){
+            content += " <span class='label label-warning'>Shortest</span>";
+        }
+        //Validates if it's the safest route
+        if(safestRoute === crimesObj[i][0].crimes.length){
+            content += "<span class='label label-info'>Safest</span>";
+        }
+        //Validates if it's the best
+        if(indexBestRoute === i){
+            content += "<span class='label label-success'>Best</span>";
+        }
+            content +=  "</div> " +
                         "<div class='info'> " +
-                            "<p>Option " + (i + 1) + "</p> " +
+                            "<p>Route " + routeIdentifiers[i] + "</p> " +
                             "<a class='btn btn-default btn-sm pull-right' href='#' onClick='changeRoute("+i+");'>Details</a> " +
                         "</div> " +
                         "<div class='clearfix'></div> " +
@@ -450,6 +499,63 @@ function changeRoute(index){
             crimeMarkers[i][j].setVisible(visibility);
         }
     }
+}
+
+function getShortestRoute(){
+    var distances = [];
+    for(var i= 0; i < routes.length ; i++){
+        distances.push(routes[i].legs[0].distance.value);
+    }
+    return Math.min(...distances);
+}
+
+function getSafestRoute(){
+    var crimeNumber = [];
+    for(var i= 0; i < crimesObj.length ; i++){
+        if(crimesObj[i] !== null && crimesObj[i] !== undefined){
+            crimeNumber.push(crimesObj[i][0].crimes.length);
+        }
+    }
+    return Math.min(...crimeNumber);
+}
+
+function getBestRoute(){
+    if(routes.length === 1){
+        return 0;
+    }
+    var rates = [];
+    var crimeNumber = [];
+    for(var i= 0; i < crimesObj.length ; i++){
+        if(crimesObj[i] !== null && crimesObj[i] !== undefined){
+            crimeNumber.push(crimesObj[i][0].crimes.length);
+        }
+    }
+    var distances = [];
+    for(var i= 0; i < routes.length ; i++){
+        distances.push(routes[i].legs[0].distance.value);
+    }
+    //Extract the max and min values
+    var maxCrime = Math.max(...crimeNumber);
+    var minCrime = Math.min(...crimeNumber);
+    var maxDistance = Math.max(...distances);
+    var minDistance = Math.min(...distances);
+    //Generate the rate per route
+    for(var i= 0; i < routes.length ; i++){
+        var normalizedDistance = (distances[i] - minDistance)/(maxDistance-minDistance);
+        var normalizedCrime = (crimeNumber[i] - minCrime)/(maxCrime-minCrime);
+        var rate = ((1-safetyLevel)*normalizedDistance) + (safetyLevel*normalizedCrime);
+        rates.push(rate);
+    }
+    //Gets the index of the route with the smallest rate
+    var minRate = Math.min(...rates);
+    var indexBetterRoute =  -1;
+    for(var i= 0; i < rates.length ; i++){
+        if(rates[i] === minRate){
+            indexBetterRoute = i;
+            break;
+        }
+    }
+    return indexBetterRoute;
 }
 
 /**
@@ -519,4 +625,28 @@ function applyInitialUIState() {
       $(".sidebar-left .sidebar-body").fadeOut('slide');
       $('.mini-submenu-left').fadeIn();
     }
+}
+
+function run_waitMe(effect){
+    $('#modalContainer > form').waitMe({
+        effect: effect,
+        text: 'Please waiting...',
+        bg: 'rgba(255,255,255,0.7)',
+        color:'#000'
+    });
+}
+
+function showSpinner(){
+    $('body').pleaseWait({
+        // crazy mode
+        crazy: false,
+        // animation speed
+        speed: 5,
+        // rotation speed
+        increment: 2,
+    });
+}
+
+function hideSpinner(){
+    $('body').pleaseWait("stop");
 }
