@@ -53,7 +53,8 @@ function initMap(){
                 mapTypeControlOptions: {
                     style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
                     position: google.maps.ControlPosition.RIGHT_BOTTOM
-                }
+                },
+                styles: [	{		"featureType":"landscape",		"stylers":[			{				"hue":"#FFBB00"			},			{				"saturation":43.400000000000006			},			{				"lightness":37.599999999999994			},			{				"gamma":1			}		]	},	{		"featureType":"road.highway",		"stylers":[			{				"hue":"#FFC200"			},			{				"saturation":-61.8			},			{				"lightness":45.599999999999994			},			{				"gamma":1			}		]	},	{		"featureType":"road.arterial",		"stylers":[			{				"hue":"#FF0300"			},			{				"saturation":-100			},			{				"lightness":51.19999999999999			},			{				"gamma":1			}		]	},	{		"featureType":"road.local",		"stylers":[			{				"hue":"#FF0300"			},			{				"saturation":-100			},			{				"lightness":52			},			{				"gamma":1			}		]	},	{		"featureType":"water",		"stylers":[			{				"hue":"#0078FF"			},			{				"saturation":-13.200000000000003			},			{				"lightness":2.4000000000000057			},			{				"gamma":1			}		]	},	{		"featureType":"poi",		"stylers":[			{				"hue":"#00FF6A"			},			{				"saturation":-1.0989010989011234			},			{				"lightness":11.200000000000017			},			{				"gamma":1			}		]	}]
             });
             //Initializes the library RouteBoxer
             routeBoxer = new RouteBoxer();
@@ -94,9 +95,11 @@ $(function(){
     });
     //Binds the click event for the search button
     $("#btnSearchRoute").click(function() {
-        clearDirections();
-        clearMarkers(false);
-        searchRoute();
+        if(validateForm()){
+            clearDirections();
+            clearMarkers(false);
+            searchRoute();
+        }
     });
     //Binds the click event for clear button
     $("#btnClear").click(function(){
@@ -117,7 +120,8 @@ function initSearch(map){
     );
     var options = {
         bounds: defaultBounds,
-        types: []
+        types: [],
+        componentRestrictions: {country: 'uk'}
     };
     //Autocomplete search Origin
     var inputOrigin = $( "#txtOrigin" )[ 0 ];
@@ -138,21 +142,25 @@ function initSearch(map){
  * @param isOrigin boolean telling if the autocomplete is the origin
  */
 function addListenerSearch(autocompleteInput, map, isOrigin){
-    var indexMarker = 0;
-    var icon = "";
-    if(isOrigin){
-        icon = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
-        indexMarker = 0;
-    }
-    else{
-        icon = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-        indexMarker = 1;
-    }
     var listener = autocompleteInput.addListener('place_changed', function() {
+        var indexMarker = 0;
+        var icon = "";
+        //Validates that the place has a geometry
         var place = autocompleteInput.getPlace();
         if (!place.geometry) {
             window.alert("Autocomplete's returned place contains no geometry");
             return;
+        }
+        //Stores an auxiliar value for validation
+        if(isOrigin){
+            $("#txtOrigin").val(place.formatted_address);
+            icon = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+            indexMarker = 0;
+        }
+        else{
+            $("#txtDestination").val(place.formatted_address);
+            icon = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+            indexMarker = 1;
         }
         // If the place has a geometry, then present it on a map.
         if (place.geometry.viewport) {
@@ -176,6 +184,30 @@ function addListenerSearch(autocompleteInput, map, isOrigin){
         placeMarkers[indexMarker] = marker;
     });
     autocompleteListener.push(listener);
+}
+
+function validateForm(){
+    //Validates selected origin and destination
+    var message = "";
+    var addressOrigin = autocompleteOrigin.getPlace() === undefined ? "" : autocompleteOrigin.getPlace().formatted_address;
+    if($("#txtOrigin").val() === "" || addressOrigin !== $("#txtOrigin").val()){
+        message +="Select a value for the origin. <br/>";
+    }
+    var addressDestination = autocompleteDestination.getPlace() === undefined ? "" : autocompleteDestination.getPlace().formatted_address;
+    if($("#txtDestination").val() === "" || addressDestination !== $("#txtDestination").val()){
+        message +="Select a value for the destination. <br/>";
+    }
+    //Validates that the destination is different than the origin
+    if($("#txtOrigin").val() !== "" && $("#txtOrigin").val() === $("#txtDestination").val()){
+        message +="The destination must be different than the origin. <br/>";
+    }
+    if(message !== ""){
+        $("#validationMessage").html(message);
+        $("#alertValidation").show();
+        return false;
+    }
+    $("#alertValidation").hide();
+    return true;
 }
 
 /**
@@ -275,8 +307,10 @@ function clearMarkers(clearPlaceMarkers) {
     if(clearPlaceMarkers) {
         if (placeMarkers !== null) {
             for (var i = 0; i < placeMarkers.length; i++) {
-                placeMarkers[i].setMap(null);
-                placeMarkers[i] = null;
+                if(placeMarkers[i] !== null && placeMarkers[i] !== undefined) {
+                    placeMarkers[i].setMap(null);
+                    placeMarkers[i] = null;
+                }
             }
         }
     }
@@ -297,6 +331,7 @@ function clearMarkers(clearPlaceMarkers) {
 function clearAutocomplete() {
     $("#txtDestination").val("");
     $("#txtOrigin").val("");
+    $("#alertValidation").hide();
     if (autocompleteListener !== null) {
          for (var i = 0; i < autocompleteListener.length; i++) {
              google.maps.event.removeListener(autocompleteListener[i]);
@@ -409,6 +444,8 @@ function drawResults(){
     var shortestRoute = getShortestRoute();
     var safestRoute = getSafestRoute();
     var indexBestRoute = getBestRoute();
+    var content = "<h5>Results</h5> "+
+                        "<ul class='item-summary'> ";
     for(var i=0; i < crimesObj.length; i++){
         //Validates that the route exist
         if(routes[i] === null || routes[i] === undefined ||
@@ -416,10 +453,11 @@ function drawResults(){
             continue;
         }
         var point = routes[i].legs[0];
-        var content = "<li>" +
-                        "<div class='overview'>" +
-                            "<p class='main-detail'>" + crimesObj[i][0].crimes.length + " " +(crimesObj[i][0].crimes.length === 1 ? "crime" : "crimes")+ "</p>" +
-                            "<p class='sub-detail'>" + point.duration.text + " | " + point.distance.text + "</p>";
+
+        content += "<li>" +
+                    "<div class='overview'>" +
+                        "<p class='main-detail'>" + crimesObj[i][0].crimes.length + " " +(crimesObj[i][0].crimes.length === 1 ? "crime" : "crimes")+ "</p>" +
+                        "<p class='sub-detail'>" + point.duration.text + " | " + point.distance.text + "</p>";
         //Validates is it's the shortest route
         if(shortestRoute === point.distance.value){
             content += " <span class='label label-warning'>Shortest</span>";
@@ -439,8 +477,10 @@ function drawResults(){
                         "</div> " +
                         "<div class='clearfix'></div> " +
                     "</li> ";
-        $("#resultsSummary").append(content);
+
     }
+    content += "</ul>";
+    $("#resultsSummary").html(content);
     changeRoute(0);
 }
 

@@ -74,7 +74,7 @@ def get_crimes_details(date, location_id):
         if crime["outcome_status"] != None:
             data = {"date_update": crime["outcome_status"]["date"], "outcome": crime["outcome_status"]["category"] }
         else:
-            data = {"date_update": "", "outcome": "" }
+            data = {"date_update": "Not available", "outcome": "Not available" }
 
         category = crime["category"]
         if grouped_data != None and category in grouped_data:

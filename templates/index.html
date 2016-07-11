@@ -11,7 +11,7 @@
         <link rel="stylesheet" href="/static/css/main.css">
         <title>Safe routes</title>
     </head>
-    <body>
+    <body style="overflow: hidden;">
         <div class="container" id="container">
           <nav class="navbar navbar-fixed-top navbar-inverse" role="navigation">
             <div class="container-fluid">
@@ -22,12 +22,11 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                     </button>
-                    <a class="navbar-brand" href="#">Safe Routes</a>
+                    <a class="navbar-brand" href="/">Safe Routes</a>
                 </div>
                 <!-- Collect the nav links, forms, and other content for toggling -->
                 <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                     <ul class="nav navbar-nav navbar-right">
-                      <li><a href="#">Data</a></li>
                       <li><a href="#">About</a></li>
                     </ul>
                 </div>
@@ -40,10 +39,10 @@
           <div id="map">
           </div>
 
-          <div class="row main-row">
-            <div class="col-sm-4 col-md-3 sidebar sidebar-left pull-left">
-              <div class="panel-group sidebar-body" id="accordion-left">
-                <div class="panel panel-default ">
+          <div class="row main-row" style="height: 100%;">
+            <div class="col-sm-4 col-md-3 sidebar sidebar-left pull-left" style="height: 100%;">
+              <div class="panel-group sidebar-body" id="accordion-left" style="height: 100%;">
+                <div class="panel panel-default" style="height: 100%;">
                   <div class="panel-heading panel-heading-sm">
                     <h4 class="panel-title">
                         Find a route
@@ -54,12 +53,14 @@
                   </div>
                   <div id="properties" class="panel-collapse collapse in">
                     <div class="panel-body panel-body-sm">
-                        <form class="panel-form" role="form">
+                        <form class="panel-form" role="form" id="searchForm">
                           <div class="form-group">
-                            <input type="text" class="form-control" placeholder="Origin" id="txtOrigin">
+                            <input type="text" class="form-control" placeholder="Origin" id="txtOrigin" data-origin="txtOrigin" required />
+                            <div class="help-block with-errors"></div>
                           </div>
                           <div class="form-group">
-                            <input type="text" class="form-control" placeholder="Destination" id="txtDestination">
+                            <input type="text" class="form-control" placeholder="Destination" id="txtDestination" data-unique="txtDestination" data-destination="txtDestination" required/>
+                            <div class="help-block with-errors"></div>
                           </div>
                           <div class="form-group">
                             <select class="form-control" placeholder="Month of report" id="cmbMonth">
@@ -70,25 +71,31 @@
                                 {% endif %}
                             </select>
                           </div>
+
+                            <div class="alert alert-danger" role="alert" id="alertValidation" style="display: none">
+                              <button type="button" class="close" onclick="$('.alert').hide()" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                              </button>
+                              <div id="validationMessage"></div>
+                            </div>
+
                           <button type="button" class="btn btn-primary" id="btnSearchRoute">Search</button>
                           <button type="button" class="btn btn-primary" id="btnClear">Clear</button>
                           <input type="hidden" id="hdnCsrfToken" value="{{csrf_token}}" />
                         </form>
 
                         <hr/>
-                        <div>
-                            <h5>Results</h5>
-                            <ul class="item-summary" id="resultsSummary">
-                            </ul>
+                        <div id="resultsSummary">
+
                         </div>
                     </div>
                   </div>
                 </div>
               </div>
+                <div class="mini-submenu mini-submenu-left pull-left" style="top: 20px; left: 35px">
+                    <i class="fa fa-search"></i>
+                </div>
             </div>
-          </div>
-          <div class="mini-submenu mini-submenu-left pull-left">
-                <i class="fa fa-search"></i>
           </div>
         </div>
 
