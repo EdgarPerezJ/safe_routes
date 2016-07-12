@@ -1,29 +1,90 @@
 /**
 * Created by Edgar on 6/14/2016.
-*
 * JS script that contains the functions to search for a route and the crime incidences in the sorrounding area.
 *
 */
-
+ 
 /**
- * Global variables required during the use of the application.
+ * Stores the map object used in the application
+ * @type {object}
  */
 var map = null;
+/**
+ * Stores the Latitude of the current location of the user
+ * @type {Object}
+ */
 var LAT = null;
+/**
+ * Stores the Longitude of the current location of the user
+ * @type {Object}
+ */
 var LNG = null;
+/**
+ * Stores the Autocomplete object for the Origin
+ * @type {Object}
+ */
 var autocompleteOrigin = null;
+/**
+ * Stores the Autocomplete object for the Destination
+ * @type {Object}
+ */
 var autocompleteDestination = null;
+/**
+ * Stores the listeners generated for the autocomplete objects used in the search form
+ * @type {Array}
+ */
 var autocompleteListener = [];
+/**
+ * Array of the directions objects found by google maps
+ * @type {Array}
+ */
 var directions = [];
+/**
+ * Array of the routes found by Google Maps
+ * @type {Array}
+ */
 var routes = [];
+/**
+ * Array that contains the markers defined for the origin and destination
+ * @type {Array}
+ */
 var placeMarkers = new Array(2);
+/**
+ * Instance of the RouteBoxer class.
+ * @type {object}
+ */
 var routeBoxer = null;
+/**
+ * Constant that contains the distance used for defining the search area around a given route
+ * @type {number}
+ */
 var distance = 0.01 * 1.609344; // km
+/**
+ * Stores the crime objects found for each route recommended by the application
+ * @type {Array}
+ */
 var crimesObj = [];
+/**
+ * Stores thelist of map markers generates in the search
+ * @type {Array}
+ */
 var crimeMarkers = [];
+/**
+ * Contains the list of infowindows generated in the search of a route
+ * @type {Array}
+ */
 var crimeInfoWindows = [];
+/**
+ * Constant that indicates the safety level to calculatethe best route
+ * @type {number}
+ */
 var safetyLevel = 0.6;
-
+/**
+ * Contains the names and descriptions of the crime types.
+ * @type {object}
+ */
+var crimeDescriptions = null;
+ 
 /**
  * Initializes the map and the bindings of the inputs and buttons
  */
@@ -54,15 +115,34 @@ function initMap(){
                     style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
                     position: google.maps.ControlPosition.RIGHT_BOTTOM
                 },
-                styles: [	{		"featureType":"landscape",		"stylers":[			{				"hue":"#FFBB00"			},			{				"saturation":43.400000000000006			},			{				"lightness":37.599999999999994			},			{				"gamma":1			}		]	},	{		"featureType":"road.highway",		"stylers":[			{				"hue":"#FFC200"			},			{				"saturation":-61.8			},			{				"lightness":45.599999999999994			},			{				"gamma":1			}		]	},	{		"featureType":"road.arterial",		"stylers":[			{				"hue":"#FF0300"			},			{				"saturation":-100			},			{				"lightness":51.19999999999999			},			{				"gamma":1			}		]	},	{		"featureType":"road.local",		"stylers":[			{				"hue":"#FF0300"			},			{				"saturation":-100			},			{				"lightness":52			},			{				"gamma":1			}		]	},	{		"featureType":"water",		"stylers":[			{				"hue":"#0078FF"			},			{				"saturation":-13.200000000000003			},			{				"lightness":2.4000000000000057			},			{				"gamma":1			}		]	},	{		"featureType":"poi",		"stylers":[			{				"hue":"#00FF6A"			},			{				"saturation":-1.0989010989011234			},			{				"lightness":11.200000000000017			},			{				"gamma":1			}		]	}]
+                styles: [   {       "featureType":"landscape",      "stylers":[         {               "hue":"#FFBB00"         },          {               "saturation":43.400000000000006         },          {               "lightness":37.599999999999994          },          {               "gamma":1           }       ]   },  {       "featureType":"road.highway",       "stylers":[         {               "hue":"#FFC200"         },          {               "saturation":-61.8          },          {               "lightness":45.599999999999994          },          {               "gamma":1           }       ]   },  {       "featureType":"road.arterial",      "stylers":[         {               "hue":"#FF0300"         },          {               "saturation":-100           },          {               "lightness":51.19999999999999           },          {               "gamma":1           }       ]   },  {       "featureType":"road.local",     "stylers":[         {               "hue":"#FF0300"         },          {               "saturation":-100           },          {               "lightness":52          },          {               "gamma":1           }       ]   },  {       "featureType":"water",      "stylers":[         {               "hue":"#0078FF"         },          {               "saturation":-13.200000000000003            },          {               "lightness":2.4000000000000057          },          {               "gamma":1           }       ]   },  {       "featureType":"poi",        "stylers":[         {               "hue":"#00FF6A"         },          {               "saturation":-1.0989010989011234            },          {               "lightness":11.200000000000017          },          {               "gamma":1           }       ]   }]
             });
-            //Initializes the library RouteBoxer
-            routeBoxer = new RouteBoxer();
             initSearch(map);
+            getCrimeDescriptions();
         }
     });
 }
-
+ 
+/**
+ * Gets the crime descriptions of each crime type
+ */
+function getCrimeDescriptions(){
+    $.ajax({
+        url: '/routes/crime_descriptions',
+        type: 'GET',
+        dataType: 'json',
+        data: {
+            format: 'json'
+        },
+        error: function () {
+            alert("An error has happened while getting the location");
+        },
+        success: function (data) {
+            crimeDescriptions = data;
+        }
+    });
+}
+ 
 /**
  * Initializes the UI
  */
@@ -108,7 +188,7 @@ $(function(){
     applyInitialUIState();
     applyMargins();
 });
-
+ 
 /**
  * Function that initializes the search form
  * @param map the map on which the form will be bound
@@ -124,17 +204,17 @@ function initSearch(map){
         componentRestrictions: {country: 'uk'}
     };
     //Autocomplete search Origin
-    var inputOrigin = $( "#txtOrigin" )[ 0 ];
+    var inputOrigin = $( "#txtOrigin" )[0];
     autocompleteOrigin = new google.maps.places.Autocomplete(inputOrigin, options);
     autocompleteOrigin.bindTo('bounds', map);
     addListenerSearch(autocompleteOrigin, map, true);
     //Autocomplete search Destination
-    var inputDestination = $( "#txtDestination" )[ 0 ];
+    var inputDestination = $( "#txtDestination" )[0];
     autocompleteDestination = new google.maps.places.Autocomplete(inputDestination, options);
     autocompleteDestination.bindTo('bounds', map);
     addListenerSearch(autocompleteDestination, map, false);
 }
-
+ 
 /**
  * Function that adds a listener to the autocomplete inputs when the value changes
  * @param autocompleteInput the html input field representing the autocomplete
@@ -185,21 +265,25 @@ function addListenerSearch(autocompleteInput, map, isOrigin){
     });
     autocompleteListener.push(listener);
 }
-
+ 
+/**
+ * Function that validates the content in the form to execute the search
+ * @returns {boolean} true, if the data provided is correct.
+ */
 function validateForm(){
     //Validates selected origin and destination
     var message = "";
     var addressOrigin = autocompleteOrigin.getPlace() === undefined ? "" : autocompleteOrigin.getPlace().formatted_address;
     if($("#txtOrigin").val() === "" || addressOrigin !== $("#txtOrigin").val()){
-        message +="Select a value for the origin. <br/>";
+        message +="Select a place for the Origin. <br/>";
     }
     var addressDestination = autocompleteDestination.getPlace() === undefined ? "" : autocompleteDestination.getPlace().formatted_address;
     if($("#txtDestination").val() === "" || addressDestination !== $("#txtDestination").val()){
-        message +="Select a value for the destination. <br/>";
+        message +="Select a place for the Destination. <br/>";
     }
     //Validates that the destination is different than the origin
     if($("#txtOrigin").val() !== "" && $("#txtOrigin").val() === $("#txtDestination").val()){
-        message +="The destination must be different than the origin. <br/>";
+        message +="The Destination must be different than the Origin. <br/>";
     }
     if(message !== ""){
         $("#validationMessage").html(message);
@@ -209,7 +293,7 @@ function validateForm(){
     $("#alertValidation").hide();
     return true;
 }
-
+ 
 /**
  * Search for the best routes (up to three) by Using Google Directions.
  */
@@ -228,6 +312,12 @@ function searchRoute(){
     directionService.route(request, function(result, status) {
         var boxesCoordsJson = new Array(3);
         if (status == google.maps.DirectionsStatus.OK) {
+            if(!validateRoutes(result.routes)){
+                $("#validationMessage").html("We're sorry. At the moment, we can only process routes up to <strong>5km</strong> of distance.");
+                $("#alertValidation").show();
+                hideSpinner();
+                return false;
+            }
             for (var i = 0, len = result.routes.length; i < len; i++) {
                 var direction = new google.maps.DirectionsRenderer({
                     map: map,
@@ -239,17 +329,33 @@ function searchRoute(){
                 routes.push(result.routes[i]);
                 // Box around the overview path of the first route
                 var path = result.routes[i].overview_path;
+                //Initializes the library RouteBoxer
+                routeBoxer = new RouteBoxer();
                 var boxes = routeBoxer.box(path, distance);
                 var boxesCoords = getBoxesCoords(boxes);
                 boxesCoordsJson[i] = boxesCoords;
             }
-            getCrimes(boxesCoordsJson);
+            prepareRequestCrimes(boxesCoordsJson);
         } else {
             alert("Directions query failed: " + status);
         }
     });
 }
-
+ 
+/**
+ * Function that validates that the distance of the route is up to 5 km
+ * @param routes array of routes found by Google Maps API
+ * @returns {boolean} false, if any of the routes is more than 5km of distance
+ */
+function validateRoutes(routes){
+    for(var i = 0; i < routes.length; i++){
+        if (routes[i].legs[0].distance.value > 5000){
+            return false;
+        }
+    }
+    return true;
+}
+ 
 /**
  * Gets the coordinates of the boxes to execute the search of the crime incidences from the data.police.uk API
  * @param boxes array of the boxes found for a given route
@@ -275,7 +381,7 @@ function getBoxesCoords(boxes){
     }
     return strBoxesCoords;
 }
-
+ 
 /**
  * Function that clears the content of a map
  */
@@ -284,8 +390,10 @@ function clearMapContent(){
     clearMarkers(true);
     clearAutocomplete();
     initSearch(map);
+    map.setCenter({lat: LAT, lng: LNG});
+    map.setZoom(13);
 }
-
+ 
 /**
  * Clear the directions displayed in the map
  */
@@ -297,8 +405,9 @@ function clearDirections() {
     }
     directions = [];
     routes = [];
+    crimesObj = [];
 }
-
+ 
 /**
  * Clear the markers displayed in the map
  * @param clearPlaceMarkers if true, clear the place markers as well
@@ -324,7 +433,7 @@ function clearMarkers(clearPlaceMarkers) {
     crimeMarkers = [];
     $("#resultsSummary").empty();
 }
-
+ 
 /**
  * Clear the listeners of the autocomplete inputs
  */
@@ -338,30 +447,50 @@ function clearAutocomplete() {
          }
     }
 }
-
+ 
 /**
  * Performs the request to get the crimes from the data.police.uk API
  * @param boxesCoords string of the coordinates of every rectangle shape separated by semi-colon (;)
  */
-function getCrimes(boxesCoords){
+function prepareRequestCrimes(boxesCoords){
     var date = $("#cmbMonth").val();
-    var requests = [];
+    console.log("Total routes: " + routes.length);
     for(var i = 0; i < boxesCoords.length; i++) {
-        var coords = boxesCoords[i];
-        requests.push(prepareRequest(date, coords, i));
+        if(boxesCoords[i] === undefined || boxesCoords[i] === null){
+            continue;
+        }
+        var coordsArr = boxesCoords[i].split(";");
+        var requests = [];
+        for (var j=0; j < coordsArr.length; j++){
+            var item = coordsArr[j];
+            var url = "https://data.police.uk/api/" + "crimes-street/all-crime?poly=" + item + "&date=" + date
+            requests.push($.ajax(url));
+        }
+        getCrimes(requests, routes.length, i);
     }
-    //Check the length of the array with the crimes to verify if all the data has been retrieved.
-    $.when(requests[0](), requests[1](), requests[2]()).then(showData);
 }
-
+ 
+function getCrimes(requests, totalRoutes, indexRoute){
+    $.when.apply($, requests).done(function () {
+            var crimes = [];
+            $.each(arguments, function (i, data) {
+                if(data !== null && data[0].length >0){
+                    $.merge(crimes, data[0]);
+                    console.log(arguments);
+                }
+            });
+            crimesObj[indexRoute] = crimes;
+            console.log("Finaliza request: " + indexRoute + " "+ crimes.length);
+            if(crimesObj.length === totalRoutes){
+                showData();
+            }
+        });
+}
+ 
 /**
  * Function that displays the data of the crime statistics obtained
- * @param data1 crime statistics of the first route
- * @param data2 crime statistics of the second route
- * @param data3 crime statistics of the third route
  */
-function showData(data1, data2, data3) {
-    crimesObj = [data1, data2, data3];
+function showData() {
     var month = $("#cmbMonth").val();
     for(var i = 0; i < crimesObj.length; i++) {
         //Validates that exist data
@@ -371,7 +500,7 @@ function showData(data1, data2, data3) {
         var infoWindows = [];
         var crimes = [];
         var j = 0;
-        var data = crimesObj[i][0].crimes;
+        var data = crimesObj[i];
         //Grouped info to draw the info boxes properly.
         var groupDataByLocation = _.groupBy(data, function (obj) {
             return obj.location.latitude+","+obj.location.longitude;
@@ -389,7 +518,7 @@ function showData(data1, data2, data3) {
                                 "<tbody>";
             for (var keyCategory in groupDataByCategory) {
                 contentString += "<tr> " +
-                                    "<td>" + keyCategory + "</th> " +
+                                    "<td>" + crimeDescriptions[keyCategory].crime_name + "</th> " +
                                     "<td style='text-align: right'>" + groupDataByCategory[keyCategory].length + "</td> " +
                                 "</tr>";
             }
@@ -435,7 +564,7 @@ function showData(data1, data2, data3) {
     drawResults();
     hideSpinner();
 }
-
+ 
 /**
  * Function that displays the results in the lest sidebar of the screen
  */
@@ -453,17 +582,17 @@ function drawResults(){
             continue;
         }
         var point = routes[i].legs[0];
-
+ 
         content += "<li>" +
                     "<div class='overview'>" +
-                        "<p class='main-detail'>" + crimesObj[i][0].crimes.length + " " +(crimesObj[i][0].crimes.length === 1 ? "crime" : "crimes")+ "</p>" +
+                        "<p class='main-detail'>" + crimesObj[i].length + " " +(crimesObj[i].length === 1 ? "crime" : "crimes")+ "</p>" +
                         "<p class='sub-detail'>" + point.duration.text + " | " + point.distance.text + "</p>";
         //Validates is it's the shortest route
         if(shortestRoute === point.distance.value){
             content += " <span class='label label-warning'>Shortest</span>";
         }
         //Validates if it's the safest route
-        if(safestRoute === crimesObj[i][0].crimes.length){
+        if(safestRoute === crimesObj[i].length){
             content += "<span class='label label-info'>Safest</span>";
         }
         //Validates if it's the best
@@ -477,13 +606,13 @@ function drawResults(){
                         "</div> " +
                         "<div class='clearfix'></div> " +
                     "</li> ";
-
+ 
     }
     content += "</ul>";
     $("#resultsSummary").html(content);
     changeRoute(0);
 }
-
+ 
 /**
  * Prepare the request to extract the crimes from the data.police.uk API
  * @param date date in format "yyyy-mm" of the crimes
@@ -513,7 +642,7 @@ function prepareRequest(date, coords, indexRoute){
     }
     return func;
 }
-
+ 
 /**
  * Function that highlights a given route and displays their crime incidences
  * @param index index of the route that will be highlighted
@@ -540,7 +669,7 @@ function changeRoute(index){
         }
     }
 }
-
+ 
 function getShortestRoute(){
     var distances = [];
     for(var i= 0; i < routes.length ; i++){
@@ -548,17 +677,17 @@ function getShortestRoute(){
     }
     return Math.min(...distances);
 }
-
+ 
 function getSafestRoute(){
     var crimeNumber = [];
     for(var i= 0; i < crimesObj.length ; i++){
         if(crimesObj[i] !== null && crimesObj[i] !== undefined){
-            crimeNumber.push(crimesObj[i][0].crimes.length);
+            crimeNumber.push(crimesObj[i].length);
         }
     }
     return Math.min(...crimeNumber);
 }
-
+ 
 function getBestRoute(){
     if(routes.length === 1){
         return 0;
@@ -567,7 +696,7 @@ function getBestRoute(){
     var crimeNumber = [];
     for(var i= 0; i < crimesObj.length ; i++){
         if(crimesObj[i] !== null && crimesObj[i] !== undefined){
-            crimeNumber.push(crimesObj[i][0].crimes.length);
+            crimeNumber.push(crimesObj[i].length);
         }
     }
     var distances = [];
@@ -597,7 +726,7 @@ function getBestRoute(){
     }
     return indexBetterRoute;
 }
-
+ 
 /**
  * Function that extract a given cookie from the browser
  * @param name name of the cookie
@@ -618,7 +747,7 @@ function getCookie(name) {
     }
     return cookieValue;
 }
-
+ 
 /**
  * Function that identifies if the method used for a request is safe
  * @param method name of the HTTP method used
@@ -628,7 +757,7 @@ function csrfSafeMethod(method) {
     // these HTTP methods do not require CSRF protection
     return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
 }
-
+ 
 /**
  * Function that applies the margins of the maps according to the device on which
  * the application is visualized.
@@ -647,7 +776,7 @@ function applyMargins() {
         .removeClass("zoom-top-collapsed");
     }
 }
-
+ 
 /**
  * Function that detects if the screen is constrained
  * @returns {boolean}
@@ -655,7 +784,7 @@ function applyMargins() {
 function isConstrained() {
     return $(".sidebar").width() == $(window).width();
 }
-
+ 
 /**
  * Function that applies the initial UI state of the application according to the screen
  * of the device.
@@ -666,16 +795,10 @@ function applyInitialUIState() {
       $('.mini-submenu-left').fadeIn();
     }
 }
-
-function run_waitMe(effect){
-    $('#modalContainer > form').waitMe({
-        effect: effect,
-        text: 'Please waiting...',
-        bg: 'rgba(255,255,255,0.7)',
-        color:'#000'
-    });
-}
-
+ 
+/**
+ * Function that shows a spinner to block the screen
+ */
 function showSpinner(){
     $('body').pleaseWait({
         // crazy mode
@@ -686,7 +809,10 @@ function showSpinner(){
         increment: 2,
     });
 }
-
+ 
+/**
+ * Function that hides the spinner that is displayed
+ */
 function hideSpinner(){
     $('body').pleaseWait("stop");
 }

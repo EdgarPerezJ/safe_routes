@@ -11,11 +11,18 @@ def index(request):
     data = crime_service.get_months_reported(request)
     return render(request, 'index.html', data)
 
+def about(request):
+    return render(request, 'about.html')
+
 def get_crimes(request):
     date = request.POST["dateCrime"]
     boxesCoords = json.loads(request.POST["boxesCoords"])
     crimes = crime_service.get_crimes(date, boxesCoords)
     return JsonResponse(crimes)
+
+def get_crime_descriptions(request):
+    crime_desc = crime_service.get_crime_descriptions()
+    return JsonResponse(crime_desc)
 
 def get_crimes_detail(request, date, location_id):
     crimes_detail = crime_service.get_crimes_details(date, location_id)

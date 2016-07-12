@@ -1,6 +1,10 @@
+/*!
+ * CSS Style Sheet for the map page
+ */
 html,
 body {
     height: 100%;
+    background-color: #FFFFFF;
 }
 
 .navbar-offset {
@@ -72,9 +76,9 @@ body {
     cursor: pointer;
 }
 
-/*
+/****************************************
 * Style for the results section
-*/
+****************************************/
 
 .item-summary > li:first-child {
     border-top: 0px;
@@ -135,4 +139,63 @@ ul, menu, dir {
 
 .color-form{
     background-color: #E6E6E6;
+}
+
+
+/*************************************
+/* Styles for the buttons
+**************************************/
+
+.btn:focus, .btn:active:focus, .btn.active:focus {
+    outline: 0 none;
+}
+
+.btn-primary {
+    background: #00bc66;
+    color: #ffffff;
+    border: 0 none;
+    border-color: #00703c;
+}
+
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary.active, .open > .dropdown-toggle.btn-primary {
+    background: #65bd95;
+}
+
+.btn-primary:active, .btn-primary.active {
+    background: #00703c;
+    box-shadow: none;
+}
+
+.btn.sharp {
+  border-radius:0;
+}
+
+/****************************************************************************
+/* Callouts
+****************************************************************************/
+.bs-callout {
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #eee;
+    border-left-width: 5px;
+    border-radius: 3px;
+}
+.bs-callout h3 {
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+.bs-callout p:last-child {
+    margin-bottom: 0;
+}
+.bs-callout code {
+    border-radius: 3px;
+}
+.bs-callout+.bs-callout {
+    margin-top: -5px;
+}
+.bs-callout-success {
+    border-left-color: #5cb85c;
+}
+.bs-callout-success h3 {
+    color: #5cb85c;
 }

@@ -70,7 +70,10 @@ def get_crimes_details(date, location_id):
         crime_incidences = json.loads(response.content)
     #Extract the data
     grouped_data = {}
+    street = None
+    total_crimes = len(crime_incidences)
     for crime in crime_incidences:
+        street = crime["location"]["street"]["name"]
         if crime["outcome_status"] != None:
             data = {"date_update": crime["outcome_status"]["date"], "outcome": crime["outcome_status"]["category"] }
         else:
@@ -85,7 +88,8 @@ def get_crimes_details(date, location_id):
                     "crime_description" : crime_descriptions[category]["crime_description"],
                     "crimes": [data]}
             grouped_data[category] = item
-    return {"crimes_detail": grouped_data}
+    date_aux = datetime.strptime(date, '%Y-%m')
+    return {"street": street, "total_crimes": total_crimes, "date": date_aux.strftime('%B %Y'), "crimes_detail": grouped_data}
 
 def get_crime_descriptions():
     crime_descriptions = {}
