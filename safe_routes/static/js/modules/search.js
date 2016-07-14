@@ -65,6 +65,11 @@ var distance = 0.01 * 1.609344; // km
  */
 var crimesObj = [];
 /**
+ * Stores only the serious crime objects found for each route recommended by the application
+ * @type {Array}
+ */
+var seriousCrimesObj = [];
+/**
  * Stores thelist of map markers generates in the search
  * @type {Array}
  */
@@ -78,12 +83,17 @@ var crimeInfoWindows = [];
  * Constant that indicates the safety level to calculatethe best route
  * @type {number}
  */
-var safetyLevel = 0.6;
+var safetyLevel = 0.7;
 /**
  * Contains the names and descriptions of the crime types.
  * @type {object}
  */
 var crimeDescriptions = null;
+/**
+ * Contains the indicators of seriousness of the crime types.
+ * @type {object}
+ */
+var crimeSeriousness = null;
  
 /**
  * Initializes the map and the bindings of the inputs and buttons
@@ -118,7 +128,7 @@ function initMap(){
                 styles: [   {       "featureType":"landscape",      "stylers":[         {               "hue":"#FFBB00"         },          {               "saturation":43.400000000000006         },          {               "lightness":37.599999999999994          },          {               "gamma":1           }       ]   },  {       "featureType":"road.highway",       "stylers":[         {               "hue":"#FFC200"         },          {               "saturation":-61.8          },          {               "lightness":45.599999999999994          },          {               "gamma":1           }       ]   },  {       "featureType":"road.arterial",      "stylers":[         {               "hue":"#FF0300"         },          {               "saturation":-100           },          {               "lightness":51.19999999999999           },          {               "gamma":1           }       ]   },  {       "featureType":"road.local",     "stylers":[         {               "hue":"#FF0300"         },          {               "saturation":-100           },          {               "lightness":52          },          {               "gamma":1           }       ]   },  {       "featureType":"water",      "stylers":[         {               "hue":"#0078FF"         },          {               "saturation":-13.200000000000003            },          {               "lightness":2.4000000000000057          },          {               "gamma":1           }       ]   },  {       "featureType":"poi",        "stylers":[         {               "hue":"#00FF6A"         },          {               "saturation":-1.0989010989011234            },          {               "lightness":11.200000000000017          },          {               "gamma":1           }       ]   }]
             });
             initSearch(map);
-            getCrimeDescriptions();
+            getCrimeTypesInfo();
         }
     });
 }
@@ -126,19 +136,20 @@ function initMap(){
 /**
  * Gets the crime descriptions of each crime type
  */
-function getCrimeDescriptions(){
+function getCrimeTypesInfo(){
     $.ajax({
-        url: '/routes/crime_descriptions',
+        url: '/routes/crime_types_info',
         type: 'GET',
         dataType: 'json',
         data: {
             format: 'json'
         },
         error: function () {
-            alert("An error has happened while getting the location");
+            alert("An error has happened while getting the crim descriptions");
         },
         success: function (data) {
-            crimeDescriptions = data;
+            crimeDescriptions = data.descriptions;
+            crimeSeriousness = data.seriousness;
         }
     });
 }
@@ -313,7 +324,7 @@ function searchRoute(){
         var boxesCoordsJson = new Array(3);
         if (status == google.maps.DirectionsStatus.OK) {
             if(!validateRoutes(result.routes)){
-                $("#validationMessage").html("We're sorry. At the moment, we can only process routes up to <strong>5km</strong> of distance.");
+                $("#validationMessage").html("We're sorry. At the moment, we can only process routes up to <strong>5 km</strong> of distance.");
                 $("#alertValidation").show();
                 hideSpinner();
                 return false;
@@ -406,6 +417,7 @@ function clearDirections() {
     directions = [];
     routes = [];
     crimesObj = [];
+    seriousCrimesObj = [];
 }
  
 /**
@@ -449,12 +461,11 @@ function clearAutocomplete() {
 }
  
 /**
- * Performs the request to get the crimes from the data.police.uk API
+ * Prepares the requests to be send to the police.uk API to extract the crime data
  * @param boxesCoords string of the coordinates of every rectangle shape separated by semi-colon (;)
  */
 function prepareRequestCrimes(boxesCoords){
     var date = $("#cmbMonth").val();
-    console.log("Total routes: " + routes.length);
     for(var i = 0; i < boxesCoords.length; i++) {
         if(boxesCoords[i] === undefined || boxesCoords[i] === null){
             continue;
@@ -469,28 +480,46 @@ function prepareRequestCrimes(boxesCoords){
         getCrimes(requests, routes.length, i);
     }
 }
- 
+
+/**
+ * Executes in pharallel the requests to the police.uk API to get the crime data
+ * @param requests array containing the ajax requests to get the crimes of a given route
+ * @param totalRoutes number of total routes recommended by Google Maps
+ * @param indexRoute index of the route searched
+ */
 function getCrimes(requests, totalRoutes, indexRoute){
     $.when.apply($, requests).done(function () {
             var crimes = [];
             $.each(arguments, function (i, data) {
                 if(data !== null && data[0].length >0){
                     $.merge(crimes, data[0]);
-                    console.log(arguments);
                 }
             });
             crimesObj[indexRoute] = crimes;
-            console.log("Finaliza request: " + indexRoute + " "+ crimes.length);
-            if(crimesObj.length === totalRoutes){
-                showData();
+            seriousCrimesObj[indexRoute] = getNumberSeriousCrimes(crimes);
+            if(crimesObj.length === totalRoutes && isCrimeDataSet()){
+                showData(crimesObj);
             }
         });
+}
+
+/**
+ * Validates is the crime data is set and ready for use
+ * @returns {boolean} true, if all data is set
+ */
+function isCrimeDataSet(){
+    for(var i = 0; i < crimesObj.length; i++) {
+        if(crimesObj[i] === undefined || crimesObj[i] === null){
+            return false;
+        }
+    }
+    return true;
 }
  
 /**
  * Function that displays the data of the crime statistics obtained
  */
-function showData() {
+function showData(crimesObj) {
     var month = $("#cmbMonth").val();
     for(var i = 0; i < crimesObj.length; i++) {
         //Validates that exist data
@@ -526,25 +555,19 @@ function showData() {
                             "</table> "+
                         "<a href='/routes/crimes_detail/"+month+"/"+subgroup[0].location.street.id+"' target='blank'>See details...</a>"+
                     "</div>";
+
             var infowindow = new google.maps.InfoWindow({
                 content: contentString
               });
+            var image = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2238%22%20height%3D%2238%22%20viewBox%3D%220%200%2038%2038%22%3E%3Cpath%20fill%3D%22%23F5A9A9%22%20stroke%3D%22%23FA5858%22%20stroke-width%3D%221.5%22%20d%3D%22M34.305%2016.234c0%208.83-15.148%2019.158-15.148%2019.158S3.507%2025.065%203.507%2016.1c0-8.505%206.894-14.304%2015.4-14.304%208.504%200%2015.398%205.933%2015.398%2014.438z%22%2F%3E%3Ctext%20transform%3D%22translate(19%2018.5)%22%20fill%3D%22%23000000%22%20style%3D%22font-family%3A%20Arial%2C%20sans-serif%3Bfont-weight%3Abold%3Btext-align%3Acenter%3B%22%20font-size%3D%2214%22%20text-anchor%3D%22middle%22%3E'+subgroup.length+'%3C%2Ftext%3E%3C%2Fsvg%3E';
             var marker = new google.maps.Marker({
                 position: new google.maps.LatLng(Number(subgroup[0].location.latitude), Number(subgroup[0].location.longitude)),
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: '#F5A9A9',
-                    fillOpacity: 1,
-                    scale: 13,
-                    strokeColor: '#FA5858',
-                    strokeWeight: 2
-                  },
-                label: ""+subgroup.length,
+                icon: image,
                 map: map,
                 infoWindowIndex : j,
                 infoWindowRouteIndex : i
             });
-            marker.setVisible(false);
+            marker.setVisible(true);
             google.maps.event.addListener(marker, 'click',
                 function(event)
                 {
@@ -564,7 +587,7 @@ function showData() {
     drawResults();
     hideSpinner();
 }
- 
+
 /**
  * Function that displays the results in the lest sidebar of the screen
  */
@@ -582,22 +605,26 @@ function drawResults(){
             continue;
         }
         var point = routes[i].legs[0];
- 
         content += "<li>" +
                     "<div class='overview'>" +
-                        "<p class='main-detail'>" + crimesObj[i].length + " " +(crimesObj[i].length === 1 ? "crime" : "crimes")+ "</p>" +
+                        "<p class='main-detail'>" + crimesObj[i].length + " " +
+                            (crimesObj[i].length === 1 ? "crime" : "crimes") +
+                            " <small>(" + seriousCrimesObj[i] + " serious)</small></p>" +
                         "<p class='sub-detail'>" + point.duration.text + " | " + point.distance.text + "</p>";
-        //Validates is it's the shortest route
-        if(shortestRoute === point.distance.value){
-            content += " <span class='label label-warning'>Shortest</span>";
-        }
-        //Validates if it's the safest route
-        if(safestRoute === crimesObj[i].length){
-            content += "<span class='label label-info'>Safest</span>";
-        }
-        //Validates if it's the best
-        if(indexBestRoute === i){
-            content += "<span class='label label-success'>Best</span>";
+        //If there are more than one routes found, we show the indicators
+        if(routes.length > 1){
+            //Validates is it's the shortest route
+            if(shortestRoute === point.distance.value){
+                content += " <span class='label label-warning'>Shortest</span>&nbsp;";
+            }
+            //Validates if it's the safest route
+            if(safestRoute === seriousCrimesObj[i]){
+                content += "<span class='label label-info'>Safest</span>&nbsp;";
+            }
+            //Validates if it's the best
+            if(indexBestRoute === i){
+                content += "<span class='label label-success'>Best</span>&nbsp;";
+            }
         }
             content +=  "</div> " +
                         "<div class='info'> " +
@@ -612,35 +639,20 @@ function drawResults(){
     $("#resultsSummary").html(content);
     changeRoute(0);
 }
- 
+
 /**
- * Prepare the request to extract the crimes from the data.police.uk API
- * @param date date in format "yyyy-mm" of the crimes
- * @param coords coordinates that delimitate the shape of the area where the crimes need to be extracted
- * @param indexRoute index of the route to which the crimes belong to
- * @returns {Function} function that executes the ajax request
+ * Get number of serious crimes from the complete list of crimes of a given route
+ * @param crimes array containing the crimes of a given route
+ * @returns {number} number of serious crimes identified.
  */
-function prepareRequest(date, coords, indexRoute){
-    //If route doesn't exist
-    if(coords === null || coords === undefined){
-        var aux = function func(){};
-        return aux;
+function getNumberSeriousCrimes(crimes){
+    var numberSeriousCrimes = 0;
+    for(var i=0; i < crimes.length; i++){
+        if(crimeSeriousness[crimes[i].category].crime_seriousness >= 3){
+            numberSeriousCrimes += 1;
+        }
     }
-    var csrftoken = getCookie('csrftoken') != null ? getCookie('csrftoken') : $("#hdnCsrfToken").val();
-    var func = function executeRequest() {
-        return $.ajax({
-            url: '/routes/crimes/',
-            type: 'POST',
-            dataType: 'json',
-            data: {"dateCrime": date, "boxesCoords": JSON.stringify(coords)},
-            beforeSend: function (xhr, settings) {
-                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                }
-            }
-        });
-    }
-    return func;
+    return numberSeriousCrimes;
 }
  
 /**
@@ -669,7 +681,11 @@ function changeRoute(index){
         }
     }
 }
- 
+
+/**
+ * Gets the distance of the sortest route
+ * @returns {*}the distance of the shortest route
+ */
 function getShortestRoute(){
     var distances = [];
     for(var i= 0; i < routes.length ; i++){
@@ -677,41 +693,45 @@ function getShortestRoute(){
     }
     return Math.min(...distances);
 }
- 
+
+/**
+ * Gets the number of serious crimes of the safest route
+ * @returns {*} number of serious crimes of the safest route
+ */
 function getSafestRoute(){
     var crimeNumber = [];
     for(var i= 0; i < crimesObj.length ; i++){
         if(crimesObj[i] !== null && crimesObj[i] !== undefined){
-            crimeNumber.push(crimesObj[i].length);
+            var numSeriousCrimes = getNumberSeriousCrimes(crimesObj[i]);
+            crimeNumber.push(numSeriousCrimes);
         }
     }
     return Math.min(...crimeNumber);
 }
- 
+
+/**
+ * Gets the index of the best route
+ * @returns {number} index of the best route
+ */
 function getBestRoute(){
     if(routes.length === 1){
         return 0;
     }
     var rates = [];
-    var crimeNumber = [];
-    for(var i= 0; i < crimesObj.length ; i++){
-        if(crimesObj[i] !== null && crimesObj[i] !== undefined){
-            crimeNumber.push(crimesObj[i].length);
-        }
-    }
     var distances = [];
     for(var i= 0; i < routes.length ; i++){
         distances.push(routes[i].legs[0].distance.value);
     }
+
     //Extract the max and min values
-    var maxCrime = Math.max(...crimeNumber);
-    var minCrime = Math.min(...crimeNumber);
+    var maxCrime = Math.max(...seriousCrimesObj);
+    var minCrime = Math.min(...seriousCrimesObj);
     var maxDistance = Math.max(...distances);
     var minDistance = Math.min(...distances);
     //Generate the rate per route
     for(var i= 0; i < routes.length ; i++){
         var normalizedDistance = (distances[i] - minDistance)/(maxDistance-minDistance);
-        var normalizedCrime = (crimeNumber[i] - minCrime)/(maxCrime-minCrime);
+        var normalizedCrime = (seriousCrimesObj[i] - minCrime)/(maxCrime-minCrime);
         var rate = ((1-safetyLevel)*normalizedDistance) + (safetyLevel*normalizedCrime);
         rates.push(rate);
     }
@@ -815,4 +835,60 @@ function showSpinner(){
  */
 function hideSpinner(){
     $('body').pleaseWait("stop");
+}
+
+function generateIcon(number) {
+  var fontSize = 16,
+    imageWidth = imageHeight = 35;
+
+  if (number >= 1000) {
+    fontSize = 10;
+    imageWidth = imageHeight = 55;
+  } else if (number < 1000 && number > 100) {
+    fontSize = 14;
+    imageWidth = imageHeight = 45;
+  }
+
+  var svg = d3.select(document.createElement('div')).append('svg')
+    .attr('viewBox', '0 0 54.4 54.4')
+    .append('g')
+
+  var circles = svg.append('circle')
+    .attr('cx', '27.2')
+    .attr('cy', '27.2')
+    .attr('r', '21.2')
+    .style('fill', '#2063C6');
+
+  var path = svg.append('path')
+    .attr('d', 'M27.2,0C12.2,0,0,12.2,0,27.2s12.2,27.2,27.2,27.2s27.2-12.2,27.2-27.2S42.2,0,27.2,0z M6,27.2 C6,15.5,15.5,6,27.2,6s21.2,9.5,21.2,21.2c0,11.7-9.5,21.2-21.2,21.2S6,38.9,6,27.2z')
+    .attr('fill', '#FFFFFF');
+
+  var text = svg.append('text')
+    .attr('dx', 27)
+    .attr('dy', 32)
+    .attr('text-anchor', 'middle')
+    .attr('style', 'font-size:' + fontSize + 'px; fill: #FFFFFF; font-family: Arial, Verdana; font-weight: bold')
+    .text(number);
+
+  var svgNode = svg.node().parentNode.cloneNode(true),
+    image = new Image();
+
+  d3.select(svgNode).select('clippath').remove();
+
+  var xmlSource = (new XMLSerializer()).serializeToString(svgNode);
+
+    var canvas = document.createElement('canvas'),
+      context = canvas.getContext('2d'),
+      dataURL;
+
+    d3.select(canvas)
+      .attr('width', imageWidth)
+      .attr('height', imageHeight);
+
+    context.drawImage(image, 0, 0, imageWidth, imageHeight);
+
+    dataURL = canvas.toDataURL();
+    //generateIconCache[number] = dataURL;
+
+    return dataURL;
 }

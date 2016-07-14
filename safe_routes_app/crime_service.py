@@ -1,9 +1,8 @@
-from safe_routes_app.models import CrimeDescriptor
+from safe_routes_app.models import CrimeDescriptor, CrimeSeriousness
 
 __author__ = 'Edgar'
 
 import requests
-import grequests
 import json
 import logging
 from datetime import datetime, timedelta
@@ -96,3 +95,9 @@ def get_crime_descriptions():
     for item in CrimeDescriptor.objects.raw('SELECT * FROM crime_descriptor'):
         crime_descriptions[item.crime_key] = {"crime_name" : item.crime_name, "crime_description" : item.crime_description}
     return crime_descriptions
+
+def get_crime_seriousness():
+    crime_seriousness = {}
+    for item in CrimeSeriousness.objects.raw('SELECT * FROM crime_seriousness'):
+        crime_seriousness[item.crime_key] = {"crime_seriousness" : int(item.seriousness_rate) }
+    return crime_seriousness

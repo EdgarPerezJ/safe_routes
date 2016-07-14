@@ -20,9 +20,10 @@ def get_crimes(request):
     crimes = crime_service.get_crimes(date, boxesCoords)
     return JsonResponse(crimes)
 
-def get_crime_descriptions(request):
+def crime_types_info(request):
     crime_desc = crime_service.get_crime_descriptions()
-    return JsonResponse(crime_desc)
+    crime_seriousness = crime_service.get_crime_seriousness()
+    return JsonResponse({"descriptions": crime_desc, "seriousness": crime_seriousness})
 
 def get_crimes_detail(request, date, location_id):
     crimes_detail = crime_service.get_crimes_details(date, location_id)
