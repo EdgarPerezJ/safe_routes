@@ -498,7 +498,6 @@ function getCrimes(requests, totalRoutes, indexRoute){
         });
         crimesObj[indexRoute] = crimes;
         seriousCrimesObj[indexRoute] = getRateSeriousCrimes(crimes);
-        console.log("Rate seriousness: " + indexRoute +" " + seriousCrimesObj[indexRoute]);
         if(crimesObj.length === totalRoutes && isCrimeDataSet()){
             showData(crimesObj);
         }
@@ -757,20 +756,13 @@ function getBestRoute(){
     var distances = [];
     for(var i= 0; i < routes.length ; i++){
         distances.push(routes[i].legs[0].distance.value);
-        console.log("Distance: "+ i +" " + routes[i].legs[0].distance.value);
     }
 
-    //Extract the max and min values
-    var maxCrime = Math.max(...seriousCrimesObj);
-    var minCrime = Math.min(...seriousCrimesObj);
-    var maxDistance = Math.max(...distances);
-    var minDistance = Math.min(...distances);
     //Generate the rate per route
     for(var j= 0; j < routes.length ; j++){
-        var normalizedDistance = (distances[j] - minDistance)/(maxDistance-minDistance);
-        var normalizedCrime = (seriousCrimesObj[j] - minCrime)/(maxCrime-minCrime);
-        console.log("Normalized Crime: "+ j +" " + normalizedCrime);var rate = ((1-safetyLevel)*normalizedDistance) + (safetyLevel*normalizedCrime);
-        console.log("Rate: "+ j +" " + rate);
+        var normalizedDistance = distances[j]/getSumArray(distances);
+        var normalizedCrime = seriousCrimesObj[j]/getSumArray(seriousCrimesObj);
+        var rate = ((1-safetyLevel)*normalizedDistance) + (safetyLevel*normalizedCrime);
         rates.push(rate);
     }
     //Gets the index of the route with the smallest rate
@@ -782,6 +774,18 @@ function getBestRoute(){
         }
     }
     return indexBetterRoute;
+}
+
+/**
+ * Gets the sum of the values of an array
+ * @param array Specified array
+ */
+function getSumArray(array){
+    var sum = 0;
+    for(var i=0; i < array.length; i++){
+        sum += array[i];
+    }
+    return sum;
 }
  
 /**
