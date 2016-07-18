@@ -1,8 +1,9 @@
 /**
-* Created by Edgar on 6/14/2016.
-* JS script that contains the functions to search for a route and the crime incidences in the sorrounding area.
-*
-*/
+ * @file JS script that contains the functions to search for a route and the crime incidences in the sorrounding area.
+ * @author Edgar Perez
+ * @version 0.1
+ * @date 6/14/2016
+ */
  
 /**
  * Stores the map object used in the application
@@ -80,7 +81,7 @@ var crimeMarkers = [];
  */
 var crimeInfoWindows = [];
 /**
- * Constant that indicates the safety level to calculatethe best route
+ * Constant that indicates the safety level to calculate the best route
  * @type {number}
  */
 var safetyLevel = 0.7;
@@ -318,7 +319,7 @@ function searchRoute(){
         destination: autocompleteDestination.getPlace().geometry.location,
         provideRouteAlternatives: true,
         travelMode: google.maps.DirectionsTravelMode.WALKING
-    }
+    };
     // Make the directions request
     directionService.route(request, function(result, status) {
         var boxesCoordsJson = new Array(3);
@@ -436,9 +437,9 @@ function clearMarkers(clearPlaceMarkers) {
         }
     }
     if(crimeMarkers !== null){
-        for(var i = 0; i < crimeMarkers.length; i++){
-            for(var j = 0; j < crimeMarkers[i].length; j++){
-                crimeMarkers[i][j].setMap(null);
+        for(var x = 0; x < crimeMarkers.length; x++){
+            for(var z = 0; z < crimeMarkers[x].length; z++){
+                crimeMarkers[x][z].setMap(null);
             }
         }
     }
@@ -474,7 +475,7 @@ function prepareRequestCrimes(boxesCoords){
         var requests = [];
         for (var j=0; j < coordsArr.length; j++){
             var item = coordsArr[j];
-            var url = "https://data.police.uk/api/" + "crimes-street/all-crime?poly=" + item + "&date=" + date
+            var url = "https://data.police.uk/api/" + "crimes-street/all-crime?poly=" + item + "&date=" + date;
             requests.push($.ajax(url));
         }
         getCrimes(requests, routes.length, i);
@@ -489,18 +490,19 @@ function prepareRequestCrimes(boxesCoords){
  */
 function getCrimes(requests, totalRoutes, indexRoute){
     $.when.apply($, requests).done(function () {
-            var crimes = [];
-            $.each(arguments, function (i, data) {
-                if(data !== null && data[0].length >0){
-                    $.merge(crimes, data[0]);
-                }
-            });
-            crimesObj[indexRoute] = crimes;
-            seriousCrimesObj[indexRoute] = getNumberSeriousCrimes(crimes);
-            if(crimesObj.length === totalRoutes && isCrimeDataSet()){
-                showData(crimesObj);
+        var crimes = [];
+        $.each(arguments, function (i, data) {
+            if(data !== null && data[0].length >0){
+                $.merge(crimes, data[0]);
             }
         });
+        crimesObj[indexRoute] = crimes;
+        seriousCrimesObj[indexRoute] = getRateSeriousCrimes(crimes);
+        console.log("Rate seriousness: " + indexRoute +" " + seriousCrimesObj[indexRoute]);
+        if(crimesObj.length === totalRoutes && isCrimeDataSet()){
+            showData(crimesObj);
+        }
+    });
 }
 
 /**
@@ -535,48 +537,50 @@ function showData(crimesObj) {
             return obj.location.latitude+","+obj.location.longitude;
         });
         for (var key in groupDataByLocation) {
-            var subgroup = groupDataByLocation[key];
-            var contentString = '<div id="content">' +
-                  '<h5 id="firstHeading" class="firstHeading">'+subgroup[0].location.street.name+'</h5>' +
-                  '<div id="bodyContent">';
-            //Groups by category
-            var groupDataByCategory = _.groupBy(subgroup, function (obj) {
-                return obj.category;
-            });
-            contentString += "<table class='table table-striped'> "+
-                                "<tbody>";
-            for (var keyCategory in groupDataByCategory) {
-                contentString += "<tr> " +
-                                    "<td>" + crimeDescriptions[keyCategory].crime_name + "</th> " +
-                                    "<td style='text-align: right'>" + groupDataByCategory[keyCategory].length + "</td> " +
-                                "</tr>";
-            }
-            contentString += "</tbody> "+
-                            "</table> "+
-                        "<a href='/routes/crimes_detail/"+month+"/"+subgroup[0].location.street.id+"' target='blank'>See details...</a>"+
+            if (groupDataByLocation.hasOwnProperty(key)) {
+                var subgroup = groupDataByLocation[key];
+                var contentString = '<div id="content">' +
+                    '<h5 id="firstHeading" class="firstHeading">' + subgroup[0].location.street.name + '</h5>' +
+                    '<div id="bodyContent">';
+                //Groups by category
+                var groupDataByCategory = _.groupBy(subgroup, function (obj) {
+                    return obj.category;
+                });
+                contentString += "<table class='table table-striped'> " +
+                    "<tbody>";
+                for (var keyCategory in groupDataByCategory) {
+                    if (groupDataByCategory.hasOwnProperty(keyCategory)) {
+                        contentString += "<tr> " +
+                            "<td>" + crimeDescriptions[keyCategory].crime_name + "</th> " +
+                            "<td style='text-align: right'>" + groupDataByCategory[keyCategory].length + "</td> " +
+                            "</tr>";
+                    }
+                }
+                contentString += "</tbody> " +
+                    "</table> " +
+                    "<a href='/routes/crimes_detail/" + month + "/" + subgroup[0].location.street.id + "' target='blank'>See details...</a>" +
                     "</div>";
 
-            var infowindow = new google.maps.InfoWindow({
-                content: contentString
-              });
-            var image = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2238%22%20height%3D%2238%22%20viewBox%3D%220%200%2038%2038%22%3E%3Cpath%20fill%3D%22%23F5A9A9%22%20stroke%3D%22%23FA5858%22%20stroke-width%3D%221.5%22%20d%3D%22M34.305%2016.234c0%208.83-15.148%2019.158-15.148%2019.158S3.507%2025.065%203.507%2016.1c0-8.505%206.894-14.304%2015.4-14.304%208.504%200%2015.398%205.933%2015.398%2014.438z%22%2F%3E%3Ctext%20transform%3D%22translate(19%2018.5)%22%20fill%3D%22%23000000%22%20style%3D%22font-family%3A%20Arial%2C%20sans-serif%3Bfont-weight%3Abold%3Btext-align%3Acenter%3B%22%20font-size%3D%2214%22%20text-anchor%3D%22middle%22%3E'+subgroup.length+'%3C%2Ftext%3E%3C%2Fsvg%3E';
-            var marker = new google.maps.Marker({
-                position: new google.maps.LatLng(Number(subgroup[0].location.latitude), Number(subgroup[0].location.longitude)),
-                icon: image,
-                map: map,
-                infoWindowIndex : j,
-                infoWindowRouteIndex : i
-            });
-            marker.setVisible(true);
-            google.maps.event.addListener(marker, 'click',
-                function(event)
-                {
+                var infowindow = new google.maps.InfoWindow({
+                    content: contentString
+                });
+                var image = 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2238%22%20height%3D%2238%22%20viewBox%3D%220%200%2038%2038%22%3E%3Cpath%20fill%3D%22%23F5A9A9%22%20stroke%3D%22%23FA5858%22%20stroke-width%3D%221.5%22%20d%3D%22M34.305%2016.234c0%208.83-15.148%2019.158-15.148%2019.158S3.507%2025.065%203.507%2016.1c0-8.505%206.894-14.304%2015.4-14.304%208.504%200%2015.398%205.933%2015.398%2014.438z%22%2F%3E%3Ctext%20transform%3D%22translate(19%2018.5)%22%20fill%3D%22%23000000%22%20style%3D%22font-family%3A%20Arial%2C%20sans-serif%3Bfont-weight%3Abold%3Btext-align%3Acenter%3B%22%20font-size%3D%2214%22%20text-anchor%3D%22middle%22%3E' + subgroup.length + '%3C%2Ftext%3E%3C%2Fsvg%3E';
+                var marker = new google.maps.Marker({
+                    position: new google.maps.LatLng(Number(subgroup[0].location.latitude), Number(subgroup[0].location.longitude)),
+                    icon: image,
+                    map: map,
+                    infoWindowIndex: j,
+                    infoWindowRouteIndex: i
+                });
+                marker.setVisible(true);
+                var funcClick = function (event) {
                     crimeInfoWindows[this.infoWindowRouteIndex][this.infoWindowIndex].open(map, this);
-                }
-            );
-            crimes.push(marker);
-            infoWindows.push(infowindow);
-            j++;
+                };
+                google.maps.event.addListener(marker, 'click', funcClick);
+                crimes.push(marker);
+                infoWindows.push(infowindow);
+                j++;
+            }
         }
         crimeInfoWindows[i] = infoWindows;
         infoWindows = [];
@@ -609,20 +613,20 @@ function drawResults(){
                     "<div class='overview'>" +
                         "<p class='main-detail'>" + crimesObj[i].length + " " +
                             (crimesObj[i].length === 1 ? "crime" : "crimes") +
-                            " <small>(" + seriousCrimesObj[i] + " serious)</small></p>" +
+                            " <small>(" + getNumberSeriousCrimes(crimesObj[i]) + " serious)</small></p>" +
                         "<p class='sub-detail'>" + point.duration.text + " | " + point.distance.text + "</p>";
         //If there are more than one routes found, we show the indicators
         if(routes.length > 1){
             //Validates is it's the shortest route
-            if(shortestRoute === point.distance.value){
+            if($.inArray(i,shortestRoute) > -1){
                 content += " <span class='label label-warning'>Shortest</span>&nbsp;";
             }
             //Validates if it's the safest route
-            if(safestRoute === seriousCrimesObj[i]){
+            if($.inArray(i,safestRoute) > -1){
                 content += "<span class='label label-info'>Safest</span>&nbsp;";
             }
             //Validates if it's the best
-            if(indexBestRoute === i){
+            if($.inArray(i,indexBestRoute) > -1){
                 content += "<span class='label label-success'>Best</span>&nbsp;";
             }
         }
@@ -641,14 +645,30 @@ function drawResults(){
 }
 
 /**
- * Get number of serious crimes from the complete list of crimes of a given route
+ * Gets the sum of the rates of all the serious crimes of a given route
  * @param crimes array containing the crimes of a given route
  * @returns {number} number of serious crimes identified.
+ */
+function getRateSeriousCrimes(crimes){
+    var rateSeriousCrimes = 0;
+    for(var i=0; i < crimes.length; i++){
+        var rate = crimeSeriousness[crimes[i].category].crime_seriousness;
+        if(rate >= 2){
+            rateSeriousCrimes += rate;
+        }
+    }
+    return rateSeriousCrimes;
+}
+
+/**
+ * Gets the number of serious crimes existing along a route
+ * @param crimes array containing all crime incidences of a route
+ * @returns {number} number of serious crimes found
  */
 function getNumberSeriousCrimes(crimes){
     var numberSeriousCrimes = 0;
     for(var i=0; i < crimes.length; i++){
-        if(crimeSeriousness[crimes[i].category].crime_seriousness >= 3){
+        if(crimeSeriousness[crimes[i].category].crime_seriousness >= 2){
             numberSeriousCrimes += 1;
         }
     }
@@ -674,10 +694,10 @@ function changeRoute(index){
         directions[i].setMap(map);
     }
     //Displays the crime-statistics properly.
-    for(var i = 0; i < crimeMarkers.length; i++){
-        var visibility = index === i ? true : false;
-        for(var j = 0; j < crimeMarkers[i].length; j++){
-            crimeMarkers[i][j].setVisible(visibility);
+    for(var x = 0; x < crimeMarkers.length; x++){
+        var visibility = index === x ? true : false;
+        for(var z = 0; z < crimeMarkers[x].length; z++){
+            crimeMarkers[x][z].setVisible(visibility);
         }
     }
 }
@@ -688,10 +708,18 @@ function changeRoute(index){
  */
 function getShortestRoute(){
     var distances = [];
+    var indexShortestRoute = [];
     for(var i= 0; i < routes.length ; i++){
         distances.push(routes[i].legs[0].distance.value);
     }
-    return Math.min(...distances);
+    var minDistance = Math.min(...distances);
+    //Gets the safest route
+    for(var j= 0; j < distances.length ; j++){
+        if(distances[j] === minDistance){
+            indexShortestRoute.push(j);
+        }
+    }
+    return indexShortestRoute;
 }
 
 /**
@@ -699,14 +727,22 @@ function getShortestRoute(){
  * @returns {*} number of serious crimes of the safest route
  */
 function getSafestRoute(){
-    var crimeNumber = [];
+    var indexSafestRoute = [];
+    var crimeRates = [];
     for(var i= 0; i < crimesObj.length ; i++){
         if(crimesObj[i] !== null && crimesObj[i] !== undefined){
-            var numSeriousCrimes = getNumberSeriousCrimes(crimesObj[i]);
-            crimeNumber.push(numSeriousCrimes);
+            var crimeSerioussRate = getRateSeriousCrimes(crimesObj[i]);
+            crimeRates.push(crimeSerioussRate);
         }
     }
-    return Math.min(...crimeNumber);
+    var minRate = Math.min(...crimeRates);
+    //Gets the safest route
+    for(var j= 0; j < crimeRates.length ; j++){
+        if(crimeRates[j] === minRate){
+            indexSafestRoute.push(j);
+        }
+    }
+    return indexSafestRoute;
 }
 
 /**
@@ -721,6 +757,7 @@ function getBestRoute(){
     var distances = [];
     for(var i= 0; i < routes.length ; i++){
         distances.push(routes[i].legs[0].distance.value);
+        console.log("Distance: "+ i +" " + routes[i].legs[0].distance.value);
     }
 
     //Extract the max and min values
@@ -729,53 +766,22 @@ function getBestRoute(){
     var maxDistance = Math.max(...distances);
     var minDistance = Math.min(...distances);
     //Generate the rate per route
-    for(var i= 0; i < routes.length ; i++){
-        var normalizedDistance = (distances[i] - minDistance)/(maxDistance-minDistance);
-        var normalizedCrime = (seriousCrimesObj[i] - minCrime)/(maxCrime-minCrime);
-        var rate = ((1-safetyLevel)*normalizedDistance) + (safetyLevel*normalizedCrime);
+    for(var j= 0; j < routes.length ; j++){
+        var normalizedDistance = (distances[j] - minDistance)/(maxDistance-minDistance);
+        var normalizedCrime = (seriousCrimesObj[j] - minCrime)/(maxCrime-minCrime);
+        console.log("Normalized Crime: "+ j +" " + normalizedCrime);var rate = ((1-safetyLevel)*normalizedDistance) + (safetyLevel*normalizedCrime);
+        console.log("Rate: "+ j +" " + rate);
         rates.push(rate);
     }
     //Gets the index of the route with the smallest rate
     var minRate = Math.min(...rates);
-    var indexBetterRoute =  -1;
-    for(var i= 0; i < rates.length ; i++){
-        if(rates[i] === minRate){
-            indexBetterRoute = i;
-            break;
+    var indexBetterRoute = [];
+    for(var k= 0; k < rates.length ; k++){
+        if(rates[k] === minRate){
+            indexBetterRoute.push(k);
         }
     }
     return indexBetterRoute;
-}
- 
-/**
- * Function that extract a given cookie from the browser
- * @param name name of the cookie
- * @returns value of the cookie
- */
-function getCookie(name) {
-    var cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        var cookies = document.cookie.split(';');
-        for (var i = 0; i < cookies.length; i++) {
-            var cookie = jQuery.trim(cookies[i]);
-            // Does this cookie string begin with the name we want?
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
- 
-/**
- * Function that identifies if the method used for a request is safe
- * @param method name of the HTTP method used
- * @returns {boolean} true is it is a safe method
- */
-function csrfSafeMethod(method) {
-    // these HTTP methods do not require CSRF protection
-    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
 }
  
 /**
@@ -835,60 +841,4 @@ function showSpinner(){
  */
 function hideSpinner(){
     $('body').pleaseWait("stop");
-}
-
-function generateIcon(number) {
-  var fontSize = 16,
-    imageWidth = imageHeight = 35;
-
-  if (number >= 1000) {
-    fontSize = 10;
-    imageWidth = imageHeight = 55;
-  } else if (number < 1000 && number > 100) {
-    fontSize = 14;
-    imageWidth = imageHeight = 45;
-  }
-
-  var svg = d3.select(document.createElement('div')).append('svg')
-    .attr('viewBox', '0 0 54.4 54.4')
-    .append('g')
-
-  var circles = svg.append('circle')
-    .attr('cx', '27.2')
-    .attr('cy', '27.2')
-    .attr('r', '21.2')
-    .style('fill', '#2063C6');
-
-  var path = svg.append('path')
-    .attr('d', 'M27.2,0C12.2,0,0,12.2,0,27.2s12.2,27.2,27.2,27.2s27.2-12.2,27.2-27.2S42.2,0,27.2,0z M6,27.2 C6,15.5,15.5,6,27.2,6s21.2,9.5,21.2,21.2c0,11.7-9.5,21.2-21.2,21.2S6,38.9,6,27.2z')
-    .attr('fill', '#FFFFFF');
-
-  var text = svg.append('text')
-    .attr('dx', 27)
-    .attr('dy', 32)
-    .attr('text-anchor', 'middle')
-    .attr('style', 'font-size:' + fontSize + 'px; fill: #FFFFFF; font-family: Arial, Verdana; font-weight: bold')
-    .text(number);
-
-  var svgNode = svg.node().parentNode.cloneNode(true),
-    image = new Image();
-
-  d3.select(svgNode).select('clippath').remove();
-
-  var xmlSource = (new XMLSerializer()).serializeToString(svgNode);
-
-    var canvas = document.createElement('canvas'),
-      context = canvas.getContext('2d'),
-      dataURL;
-
-    d3.select(canvas)
-      .attr('width', imageWidth)
-      .attr('height', imageHeight);
-
-    context.drawImage(image, 0, 0, imageWidth, imageHeight);
-
-    dataURL = canvas.toDataURL();
-    //generateIconCache[number] = dataURL;
-
-    return dataURL;
 }

@@ -14,6 +14,11 @@ main_url = "https://data.police.uk/api/"
 logger = logging.getLogger("GigM8")
 
 def get_months_reported(request):
+    """Get the moths reported considering the last update
+
+    Keyword arguments:
+    request -- Http request object
+    """
     response = requests.get(main_url + "crime-last-updated")
     months = []
     if(response.ok):
@@ -40,25 +45,13 @@ def get_months_reported(request):
     }
     return data
 
-def get_crimes(date, boxesCoords):
-    crimes = {}
-    #Get the crimes per each subarea
-    crime_incidences = []
-    coordsArr = boxesCoords.split(";")
-    urls = []
-    for item in coordsArr:
-        response = requests.get(main_url + "crimes-street/all-crime?poly=" + item + "&date=" + date)
-        if(response.ok):
-            # convert the content to json and extract the date
-            jdata = json.loads(response.content)
-            if len(jdata) > 0:
-                crime_incidences += jdata
-
-    crime_data = {"crimes" : crime_incidences}
-    return crime_data
-
-
 def get_crimes_details(date, location_id):
+    """Get the details of the crimes located in a particular area
+
+    Keyword arguments:
+    date -- Date of the crimes reportes in format YYYY-DD
+    location_id -- Id of the crime area
+    """
     crimes = {}
     #Get the crimes per each subarea
     crime_incidences = []
@@ -91,13 +84,41 @@ def get_crimes_details(date, location_id):
     return {"street": street, "total_crimes": total_crimes, "date": date_aux.strftime('%B %Y'), "crimes_detail": grouped_data}
 
 def get_crime_descriptions():
+    """Get the name and description of the list of crime categories.
+
+    Keyword arguments:
+    """
     crime_descriptions = {}
     for item in CrimeDescriptor.objects.raw('SELECT * FROM crime_descriptor'):
         crime_descriptions[item.crime_key] = {"crime_name" : item.crime_name, "crime_description" : item.crime_description}
     return crime_descriptions
 
 def get_crime_seriousness():
+    """Get the list of crime categories with their crime seriousness
+
+    Keyword arguments:
+    """
     crime_seriousness = {}
-    for item in CrimeSeriousness.objects.raw('SELECT * FROM crime_seriousness'):
+    for item in CrimeSeriousness.objects.raw('SELECT * FROM crime_seriousness order by seriousness_rate asc'):
         crime_seriousness[item.crime_key] = {"crime_seriousness" : int(item.seriousness_rate) }
+    return crime_seriousness
+
+def get_crime_seriousness_filter(seriousness):
+    """Get the list of crime categories filtered by seriousness
+
+    Keyword arguments:
+    seriousness -- 1 for serious crimes, 0 for less-serious crimes.
+    """
+    crime_seriousness = []
+    condition = ""
+    if seriousness == 1:
+        condition = ">=2 "
+    else:
+        condition = "<2 "
+    for item in CrimeSeriousness.objects.raw('SELECT a.*, a.seriousness_rate as crime_seriousness, b.crime_name, b.crime_description '
+                                             'FROM crime_seriousness a inner join ' +
+                                             'crime_descriptor b on a.id = b.id ' +
+                                             'where  a.seriousness_rate ' + condition +
+                                             'order by seriousness_rate desc'):
+        crime_seriousness.append(item)
     return crime_seriousness

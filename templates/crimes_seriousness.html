@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="google-site-verification" content="L5DviuJLMLTwBEFcKNQ4YxrjdLJsoa6Xc5nFv7qJYG8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+        <link rel="stylesheet" href="/static/css/font-awesome.min.css">
+        <link rel="stylesheet" href="/static/css/main.css">
+        <style>
+            .row {
+                margin-right: 30px;
+                margin-left: 30px;
+            }
+        </style>
+        <title>Safe Routes</title>
+    </head>
+    <body style="padding-top: 60px;">
+        <div class="container" id="container">
+          <nav class="navbar navbar-fixed-top navbar-inverse" role="navigation">
+            <div class="container-fluid">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">Safe Routes</a>
+                </div>
+                <!-- Collect the nav links, forms, and other content for toggling -->
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="/routes/crime_seriousness">Crime Seriousness</a></li>
+                        <li><a href="/about">About</a></li>
+                    </ul>
+                </div>
+            </div>
+              </nav>
+            </div>
+          </nav>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="bs-callout bs-callout-success">
+                        <h3>
+                            Crime seriousness <small> means the degree to which a crime affects an individual or a society.</small>
+                        </h3>
+                        <p>
+                            Safe Routes identifies the seriousness of each incidence to calculate the safest and the best route among the recommended walking routes,
+                            by adapting the classification proposed by <a href="http://www.jstor.org/stable/2094234">Selling and Wolfgang (1964)</a>. The following
+                            tables describe this classification and lists the crimes categories that belongs to each group.
+                        </p>
+                    </div>
+                </div>
+            </div>
+          <div class="row">
+            <div class="col-md-8">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Category I: Serious crimes</strong>
+                    </div>
+                    <div class="panel-body">
+                        Crimes that represent bodily harm and/or property loss and/or property damage for pedestrians.
+                        <hr/>
+                        <div class="col-md-12">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 200px;">Category</th>
+                                        <th>Desciption</th>
+                                    </tr>
+                                <thead>
+                                <tbody>
+                                    {% if serious_crimes %}
+                                        {% for item in serious_crimes %}
+                                                <tr>
+                                                    <td>{{ item.crime_name }}</td>
+                                                    <td>{{ item.crime_description }}</td>
+                                                </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <strong>Category II: Less serious crimes</strong>
+                    </div>
+                    <div class="panel-body">
+                        Crimes that represent intimidation or secondary victimization for pedestrians or juvenile status offenses.
+                        <hr/>
+                        <div class="col-md-12">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 200px;">Category</th>
+                                        <th>Desciption</th>
+                                    </tr>
+                                <thead>
+                                <tbody>
+                                    {% if non_serious_crimes %}
+                                        {% for item in non_serious_crimes %}
+                                                <tr>
+                                                    <td>{{ item.crime_name }}</td>
+                                                    <td>{{ item.crime_description }}</td>
+                                                </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                               </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">&nbsp;</div>
+          </div>
+        </div>
+
+        <script type="text/javascript" src="/static/js/lib/jquery-2.1.1.min.js"></script>
+        <script type="text/javascript" src="/static/js/lib/bootstrap.min.js"></script>
+    </body>
+</html>

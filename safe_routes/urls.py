@@ -1,3 +1,5 @@
+__author__ = 'Edgar'
+
 from django.conf.urls import include,url
 from safe_routes_app import views
 
