@@ -13,7 +13,7 @@ main_url = "https://data.police.uk/api/"
 # Get an instance of a logger
 logger = logging.getLogger("GigM8")
 
-def get_months_reported(request):
+def get_months_reported():
     """Get the moths reported considering the last update
 
     Keyword arguments:
@@ -24,14 +24,15 @@ def get_months_reported(request):
     if(response.ok):
         # convert the content to json and extract the date
         jdata = json.loads(response.content)
-        date_updated = datetime.strptime(jdata["date"], '%Y-%m-%d')
+        #date_updated = datetime.strptime(jdata["date"], '%Y-%m-%d')
+        date_updated = datetime.strptime("2016-04-20", '%Y-%m-%d')
         #Get the months from 1 year before
         date_aux = date_updated
         months.append({
             "month": date_aux.strftime('%Y-%m'),
             "str_month": "Reported in " + date_aux.strftime('%B %Y')
         })
-        for i in range(0, 11):
+        for i in range(0, 12):
             d_subtracted = datetime(date_aux.year, date_aux.month, 1) - timedelta(days=1)
             months.append({
                 "month": d_subtracted.strftime('%Y-%m'),

@@ -14,7 +14,7 @@ def index(request):
     Keyword arguments:
     request -- Http request object
     """
-    data = crime_service.get_months_reported(request)
+    data = crime_service.get_months_reported()
     return render(request, 'index.html', data)
 
 def about(request):

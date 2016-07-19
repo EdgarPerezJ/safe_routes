@@ -244,13 +244,14 @@ function addListenerSearch(autocompleteInput, map, isOrigin){
             return;
         }
         //Stores an auxiliar value for validation
+        var namePlace = $.inArray("establishment",place.types) >= 0 ? place.name + ", " : "";
         if(isOrigin){
-            $("#txtOrigin").val(place.formatted_address);
+            $("#txtOrigin").val(namePlace + place.formatted_address);
             icon = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
             indexMarker = 0;
         }
         else{
-            $("#txtDestination").val(place.formatted_address);
+            $("#txtDestination").val(namePlace + place.formatted_address);
             icon = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
             indexMarker = 1;
         }
@@ -285,11 +286,22 @@ function addListenerSearch(autocompleteInput, map, isOrigin){
 function validateForm(){
     //Validates selected origin and destination
     var message = "";
-    var addressOrigin = autocompleteOrigin.getPlace() === undefined ? "" : autocompleteOrigin.getPlace().formatted_address;
+    var addressOrigin = "";
+    //Get the address of origin to validate
+    if (autocompleteOrigin.getPlace() !== undefined){
+        addressOrigin = $.inArray("establishment",autocompleteOrigin.getPlace().types) >= 0 ?
+            autocompleteOrigin.getPlace().name + ", " + autocompleteOrigin.getPlace().formatted_address :
+            autocompleteOrigin.getPlace().formatted_address;
+    }
     if($("#txtOrigin").val() === "" || addressOrigin !== $("#txtOrigin").val()){
         message +="Select a place for the Origin. <br/>";
     }
-    var addressDestination = autocompleteDestination.getPlace() === undefined ? "" : autocompleteDestination.getPlace().formatted_address;
+    //Gets the address of destination to validate
+    if (autocompleteDestination.getPlace() !== undefined){
+        addressDestination = $.inArray("establishment",autocompleteDestination.getPlace().types) >= 0 ?
+            autocompleteDestination.getPlace().name + ", " + autocompleteDestination.getPlace().formatted_address :
+            autocompleteDestination.getPlace().formatted_address;
+    }
     if($("#txtDestination").val() === "" || addressDestination !== $("#txtDestination").val()){
         message +="Select a place for the Destination. <br/>";
     }
