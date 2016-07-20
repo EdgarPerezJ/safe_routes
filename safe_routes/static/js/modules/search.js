@@ -723,7 +723,7 @@ function getShortestRoute(){
     for(var i= 0; i < routes.length ; i++){
         distances.push(routes[i].legs[0].distance.value);
     }
-    var minDistance = Math.min(...distances);
+    var minDistance = Math.min.apply(null, distances);
     //Gets the safest route
     for(var j= 0; j < distances.length ; j++){
         if(distances[j] === minDistance){
@@ -746,7 +746,7 @@ function getSafestRoute(){
             crimeRates.push(crimeSerioussRate);
         }
     }
-    var minRate = Math.min(...crimeRates);
+    var minRate = Math.min.apply(null, crimeRates);
     //Gets the safest route
     for(var j= 0; j < crimeRates.length ; j++){
         if(crimeRates[j] === minRate){
@@ -778,7 +778,7 @@ function getBestRoute(){
         rates.push(rate);
     }
     //Gets the index of the route with the smallest rate
-    var minRate = Math.min(...rates);
+    var minRate = Math.min.apply(null, rates);
     var indexBetterRoute = [];
     for(var k= 0; k < rates.length ; k++){
         if(rates[k] === minRate){
