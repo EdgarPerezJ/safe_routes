@@ -14,12 +14,12 @@ var map = null;
  * Stores the Latitude of the current location of the user
  * @type {Object}
  */
-var LAT = null;
+var LAT = 52.576350;
 /**
  * Stores the Longitude of the current location of the user
  * @type {Object}
  */
-var LNG = null;
+var LNG = -1.8127441;
 /**
  * Stores the Autocomplete object for the Origin
  * @type {Object}
@@ -114,13 +114,17 @@ function initMap(){
         },
         success: function(data) {
             //Sets the latitude and longitude based on the current location of the client.
-            LAT = data.latitude;
-            LNG = data.longitude;
+            var zoom = 7;
+            if(data.country === "GB") {
+                LAT = data.latitude;
+                LNG = data.longitude;
+                zoom = 13;
+            }
             //Creates the map
             var mapDiv = document.getElementById('map');
             map = new google.maps.Map(mapDiv, {
                 center: {lat: LAT, lng: LNG},
-                zoom: 13,
+                zoom: zoom,
                 mapTypeControl: true,
                 mapTypeControlOptions: {
                     style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
