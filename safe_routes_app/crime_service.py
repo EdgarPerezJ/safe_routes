@@ -24,8 +24,7 @@ def get_months_reported():
     if(response.ok):
         # convert the content to json and extract the date
         jdata = json.loads(response.content)
-        #date_updated = datetime.strptime(jdata["date"], '%Y-%m-%d')
-        date_updated = datetime.strptime("2016-04-20", '%Y-%m-%d')
+        date_updated = datetime.strptime(jdata["date"], '%Y-%m-%d')
         #Get the months from 1 year before
         date_aux = date_updated
         months.append({
