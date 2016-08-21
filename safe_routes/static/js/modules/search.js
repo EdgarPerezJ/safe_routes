@@ -177,18 +177,6 @@ $(function(){
         applyMargins();
     });
     $(window).on("resize", applyMargins);
-    var map = new ol.Map({
-        target: "map",
-        layers: [
-            new ol.layer.Tile({
-                source: new ol.source.OSM()
-            })
-        ],
-        view: new ol.View({
-            center: [0, 0],
-            zoom: 15
-        })
-    });
     //Binds the click event for the search button
     $("#btnSearchRoute").click(function() {
         if(validateForm()){
@@ -291,6 +279,7 @@ function validateForm(){
     //Validates selected origin and destination
     var message = "";
     var addressOrigin = "";
+    var addressDestination = "";
     //Get the address of origin to validate
     if (autocompleteOrigin.getPlace() !== undefined){
         addressOrigin = $.inArray("establishment",autocompleteOrigin.getPlace().types) >= 0 ?

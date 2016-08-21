@@ -31,7 +31,7 @@ def get_months_reported():
             "month": date_aux.strftime('%Y-%m'),
             "str_month": "Reported in " + date_aux.strftime('%B %Y')
         })
-        for i in range(0, 12):
+        for i in range(0, 11):
             d_subtracted = datetime(date_aux.year, date_aux.month, 1) - timedelta(days=1)
             months.append({
                 "month": d_subtracted.strftime('%Y-%m'),
